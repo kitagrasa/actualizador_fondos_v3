@@ -2,7 +2,12 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from .logger import setup_logger
+import sys
+
+# Añadir directorio raíz al path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
