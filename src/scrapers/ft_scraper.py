@@ -26,17 +26,34 @@ class FTScraper:
         })
     
     def parse_date_ft(self, date_str):
-        date_clean = date_str.strip()
+        # FT duplica la fecha: "Wednesday, February 11, 2026Wed, Feb 11, 2026"
+        # Separamos por las abreviaturas de días
+        date_parts = date_str.split('Mon, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Tue, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Wed, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Thu, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Fri, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Sat, ')
+        if len(date_parts) == 1:
+            date_parts = date_str.split('Sun, ')
         
-        for prefix in ['Monday, ', 'Tuesday, ', 'Wednesday, ', 'Thursday, ', 'Friday, ', 'Saturday, ', 'Sunday, ',
-                       'Mon, ', 'Tue, ', 'Wed, ', 'Thu, ', 'Fri, ', 'Sat, ', 'Sun, ']:
-            date_clean = date_clean.replace(prefix, '')
+        # Si se separó, usar la parte corta (después del split)
+        if len(date_parts) > 1:
+            date_clean = date_parts[1].strip()
+        else:
+            date_clean = date_str.strip()
         
-        formats = ["%B %d, %Y", "%b %d, %Y"]
+        # Intentar parsear formato corto: "Feb 11, 2026"
+        formats = ["%b %d, %Y", "%B %d, %Y"]
         
         for fmt in formats:
             try:
-                dt = datetime.strptime(date_clean.strip(), fmt)
+                dt = datetime.strptime(date_clean, fmt)
                 return dt.strftime("%Y-%m-%d")
             except:
                 continue
@@ -93,8 +110,6 @@ class FTScraper:
                 
                 date_raw = cols[0].get_text(strip=True)
                 close_price_raw = cols[4].get_text(strip=True)
-                
-                logger.debug(f"FT: Fila {idx} - Fecha raw: '{date_raw}', Close raw: '{close_price_raw}'")
                 
                 date_parsed = self.parse_date_ft(date_raw)
                 if not date_parsed:
