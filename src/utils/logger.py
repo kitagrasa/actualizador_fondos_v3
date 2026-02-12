@@ -19,4 +19,3 @@ def setup_logger(name):
         logger.addHandler(handler)
     
     return logger
-
