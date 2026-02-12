@@ -4,7 +4,6 @@ from datetime import datetime
 import sys
 from pathlib import Path
 
-# Añadir directorio raíz al path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from utils.logger import setup_logger
@@ -22,13 +21,10 @@ class FTScraper:
         })
     
     def parse_date_ft(self, date_str):
-        """
-        Convierte formatos FT a ISO:
-        'Wednesday, September 24, 2025' -> '2025-09-24'
-        'Wed, Sep 24, 2025' -> '2025-09-24'
-        """
-        date_clean = date_str.replace('Wed, ', '').replace('Thu, ', '').replace('Fri, ', '')
-        date_clean = date_clean.replace('Mon, ', '').replace('Tue, ', '').replace('Sat, ', '').replace('Sun, ', '')
+        date_clean = date_str.strip()
+        
+        for prefix in ['Mon, ', 'Tue, ', 'Wed, ', 'Thu, ', 'Fri, ', 'Sat, ', 'Sun, ']:
+            date_clean = date_clean.replace(prefix, '')
         
         formats = [
             "%A, %B %d, %Y",
@@ -45,19 +41,8 @@ class FTScraper:
         return None
     
     def scrape(self, isin):
-        """
-        Devuelve:
-        {
-            "name": "Bestinver Tordesillas...",
-            "currency": "EUR",
-            "prices": [
-                {"date": "2025-09-24", "price": 27.32, "source": "ft", "priority": 20},
-                ...
-            ]
-        }
-        """
         url = self.BASE_URL.format(isin=isin)
-        logger.info(f"🌐 FT: {url}")
+        logger.info(f"FT: {url}")
         
         try:
             response = self.session.get(url, timeout=self.timeout)
@@ -70,37 +55,31 @@ class FTScraper:
                 name_elem = soup.find('h1')
             fund_name = name_elem.get_text(strip=True) if name_elem else ""
             
-            table = (
-                soup.find('table', class_='mod-tearsheet-historical-prices__results') or
-                soup.find('table', class_='mod-ui-table') or
-                soup.find('table')
-            )
+            table = soup.find('table', class_='mod-tearsheet-historical-prices__results')
             
             if not table:
-                logger.warning(f"⚠️  FT: Tabla no encontrada para {isin}")
+                logger.warning(f"FT: Tabla no encontrada para {isin}")
                 return {"name": fund_name, "currency": "EUR", "prices": []}
             
             prices = []
-            rows = table.find_all('tr')[1:]
+            rows = table.find('tbody').find_all('tr') if table.find('tbody') else []
             
             for row in rows:
                 cols = row.find_all('td')
-                if len(cols) < 2:
+                if len(cols) < 5:
                     continue
                 
                 date_raw = cols[0].get_text(strip=True)
-                date_parsed = self.parse_date_ft(date_raw)
+                close_price_raw = cols[4].get_text(strip=True)
                 
+                date_parsed = self.parse_date_ft(date_raw)
                 if not date_parsed:
                     continue
                 
-                price_col_idx = 3 if len(cols) >= 5 else 1
-                price_raw = cols[price_col_idx].get_text(strip=True)
-                
                 try:
-                    price_clean = price_raw.replace(',', '').replace('€', '').replace('EUR', '').strip()
+                    price_clean = close_price_raw.replace(',', '').strip()
                     
-                    if not price_clean or price_clean == '0.00' or price_clean == '00.00':
+                    if not price_clean or price_clean in ['0', '0.00', '0.0']:
                         continue
                     
                     price_value = float(price_clean)
@@ -111,12 +90,12 @@ class FTScraper:
                         "source": "ft",
                         "priority": 20
                     })
-                except (ValueError, IndexError) as e:
-                    logger.debug(f"No se pudo parsear precio '{price_raw}': {e}")
+                except (ValueError, IndexError):
                     continue
             
-            logger.info(f"✓ FT: {len(prices)} precios obtenidos para {isin}")
+            logger.info(f"FT: {len(prices)} precios obtenidos para {isin}")
             return {"name": fund_name, "currency": "EUR", "prices": prices}
         
         except Exception as e:
-            logger.error(f"❌ FT Error para {
+            logger.error(f"FT Error para {isin}: {str(e)}")
+            return {"name": "", "currency": "EUR", "prices": []}
