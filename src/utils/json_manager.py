@@ -57,7 +57,7 @@ class JSONManager:
                 return False
         else:
             data["prices"].append(new_price)
-            logger.debug(f"Añadido {date_str}: {new_price['price']} ({new_price['source']})")
+            logger.debug(f"Anadido {date_str}: {new_price['price']} ({new_price['source']})")
             return True
     
     def save_data(self, isin, data):
@@ -75,6 +75,6 @@ class JSONManager:
         json_path = self.get_json_path(isin)
         if json_path.exists():
             json_path.unlink()
-            logger.info(f"Eliminado histórico de {isin}")
+            logger.info(f"Eliminado historico de {isin}")
             return True
         return False
