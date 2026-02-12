@@ -1,0 +1,20 @@
+{
+  "isin": "LU0563745743",
+  "name": "Bestinver Tordesillas SICAV Iberia A",
+  "currency": "EUR",
+  "prices": [
+    {
+      "date": "2026-02-10",
+      "price": 32.828,
+      "source": "fundsquare",
+      "priority": 10
+    },
+    {
+      "date": "2026-02-11",
+      "price": 32.763,
+      "source": "fundsquare",
+      "priority": 10
+    }
+  ],
+  "last_update": "2026-02-12 20:59:31"
+}
