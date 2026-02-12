@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 import sys
 from pathlib import Path
 
@@ -28,19 +28,8 @@ class FundsquareScraper:
             return None
     
     def scrape(self, id_instr):
-        # Calcular rango de fechas: desde hace 20 años hasta hoy
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=20*365)
-        
-        # Formato de fechas para Fundsquare: DD/MM/YYYY
-        date_debut = start_date.strftime("%d/%m/%Y")
-        date_fin = end_date.strftime("%d/%m/%Y")
-        
-        # URL con parámetros de fecha
-        url = f"{self.BASE_URL}?idInstr={id_instr}&dateDebut={date_debut}&dateFin={date_fin}"
-        
+        url = f"{self.BASE_URL}?idInstr={id_instr}"
         logger.info(f"Fundsquare: {url}")
-        logger.info(f"Fundsquare: Solicitando datos desde {date_debut} hasta {date_fin}")
         
         try:
             response = self.session.get(url, timeout=self.timeout)
