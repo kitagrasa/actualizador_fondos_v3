@@ -4,17 +4,137 @@
   "currency": "EUR",
   "prices": [
     {
+      "date": "2026-01-13",
+      "price": 32.42,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-14",
+      "price": 32.67,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-15",
+      "price": 32.62,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-16",
+      "price": 32.59,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-19",
+      "price": 32.4,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-20",
+      "price": 31.97,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-21",
+      "price": 31.96,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-22",
+      "price": 32.56,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-23",
+      "price": 32.43,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-26",
+      "price": 32.53,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-27",
+      "price": 32.61,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-28",
+      "price": 32.43,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-29",
+      "price": 32.17,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-01-30",
+      "price": 32.51,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-02",
+      "price": 32.93,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-03",
+      "price": 32.74,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-04",
+      "price": 32.45,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-05",
+      "price": 31.93,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-06",
+      "price": 32.35,
+      "source": "ft",
+      "priority": 20
+    },
+    {
+      "date": "2026-02-09",
+      "price": 32.83,
+      "source": "ft",
+      "priority": 20
+    },
+    {
       "date": "2026-02-10",
-      "price": 32.828,
-      "source": "fundsquare",
-      "priority": 10
+      "price": 32.83,
+      "source": "ft",
+      "priority": 20
     },
     {
       "date": "2026-02-11",
-      "price": 32.763,
-      "source": "fundsquare",
-      "priority": 10
+      "price": 32.76,
+      "source": "ft",
+      "priority": 20
     }
   ],
-  "last_update": "2026-02-12 21:24:58"
+  "last_update": "2026-02-12 21:28:16"
 }
