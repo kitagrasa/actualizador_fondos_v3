@@ -1,0 +1,6 @@
+# CONFIGURACIÓN DE FONDOS
+# Formato: ISIN|idInstr
+# Para AÑADIR un fondo: añade una línea nueva
+# Para ELIMINAR un fondo: borra toda la línea
+
+LU0563745743|87217
