@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import sys
 from pathlib import Path
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -11,8 +12,7 @@ from utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 class FTScraper:
-    # FT permite especificar rango de fechas en la URL
-    BASE_URL = "https://markets.ft.com/data/funds/tearsheet/historical?s={isin}:EUR&startDate={start_date}&endDate={end_date}"
+    BASE_URL = "https://markets.ft.com/data/funds/tearsheet/historical?s={isin}:EUR"
     
     def __init__(self, timeout=30):
         self.timeout = timeout
@@ -22,13 +22,10 @@ class FTScraper:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            'Connection': 'keep-alive'
         })
     
     def parse_date_ft(self, date_str):
-        # FT duplica la fecha: "Wednesday, February 11, 2026Wed, Feb 11, 2026"
-        # Separamos por las abreviaturas de días
         date_parts = date_str.split('Mon, ')
         if len(date_parts) == 1:
             date_parts = date_str.split('Tue, ')
@@ -43,13 +40,11 @@ class FTScraper:
         if len(date_parts) == 1:
             date_parts = date_str.split('Sun, ')
         
-        # Si se separó, usar la parte corta (después del split)
         if len(date_parts) > 1:
             date_clean = date_parts[1].strip()
         else:
             date_clean = date_str.strip()
         
-        # Intentar parsear formato corto: "Feb 11, 2026"
         formats = ["%b %d, %Y", "%B %d, %Y"]
         
         for fmt in formats:
@@ -60,16 +55,7 @@ class FTScraper:
                 continue
         return None
     
-    def scrape_date_range(self, isin, start_date, end_date):
-        """Scrapea un rango específico de fechas"""
-        url = self.BASE_URL.format(
-            isin=isin,
-            start_date=start_date.strftime("%Y%m%d"),
-            end_date=end_date.strftime("%Y%m%d")
-        )
-        
-        logger.info(f"FT: {url}")
-        
+    def scrape_single_page(self, url):
         try:
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
@@ -77,9 +63,7 @@ class FTScraper:
             soup = BeautifulSoup(response.text, 'lxml')
             
             table = soup.find('table', class_='mod-tearsheet-historical-prices__results')
-            
             if not table:
-                logger.warning(f"FT: Tabla no encontrada")
                 return []
             
             tbody = table.find('tbody')
@@ -123,37 +107,39 @@ class FTScraper:
             return prices
         
         except Exception as e:
-            logger.error(f"FT: Error en rango {start_date} - {end_date}: {str(e)}")
+            logger.error(f"FT: Error en request: {str(e)}")
             return []
     
     def scrape(self, isin, years_back=20):
-        """Scrapea histórico completo dividiendo en rangos de 1 año"""
-        logger.info(f"FT: Scrapeando {years_back} años de histórico para {isin}")
+        logger.info(f"FT: Scrapeando hasta {years_back} años para {isin}")
         
-        soup_name = None
         all_prices = []
+        fund_name = ""
         
         end_date = datetime.now()
         
-        # Dividir en rangos de 1 año para evitar límites de FT
         for year in range(years_back):
             start_date = end_date - timedelta(days=365)
             
-            logger.info(f"FT: Rango {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+            url = f"{self.BASE_URL.format(isin=isin)}&startDate={start_date.strftime('%Y%m%d')}&endDate={end_date.strftime('%Y%m%d')}"
             
-            prices = self.scrape_date_range(isin, start_date, end_date)
+            logger.debug(f"FT: Rango {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+            
+            prices = self.scrape_single_page(url)
             all_prices.extend(prices)
             
-            logger.info(f"FT: {len(prices)} precios en este rango")
+            logger.debug(f"FT: {len(prices)} precios en este rango")
+            
+            if len(prices) == 0 and year > 0:
+                logger.info(f"FT: Sin datos más antiguos, deteniendo en año {year}")
+                break
             
             end_date = start_date - timedelta(days=1)
+            
+            time.sleep(0.5)
         
-        # Obtener nombre del fondo de la primera request
         try:
-            response = self.session.get(
-                f"https://markets.ft.com/data/funds/tearsheet/historical?s={isin}:EUR",
-                timeout=self.timeout
-            )
+            response = self.session.get(self.BASE_URL.format(isin=isin), timeout=self.timeout)
             soup = BeautifulSoup(response.text, 'lxml')
             name_elem = soup.find('h1', class_='mod-tearsheet-overview__header__name')
             if not name_elem:
@@ -162,6 +148,6 @@ class FTScraper:
         except:
             fund_name = ""
         
-        logger.info(f"FT: Total {len(all_prices)} precios obtenidos para {isin}")
+        logger.info(f"FT: {len(all_prices)} precios totales obtenidos para {isin}")
         
         return {"name": fund_name, "currency": "EUR", "prices": all_prices}
