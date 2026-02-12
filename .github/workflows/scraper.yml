@@ -1,0 +1,46 @@
+name: Fund Price Scraper
+
+on:
+  schedule:
+    - cron: '*/19 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🚀 Run scraper
+        run: python src/main.py
+      
+      - name: 💾 Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add data/historical/*.json
+          
+          if git diff --staged --quiet; then
+            echo "✓ No hay cambios que commitear"
+          else
+            git commit -m "🤖 Auto-update: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✓ Cambios commiteados y pusheados"
+          fi
