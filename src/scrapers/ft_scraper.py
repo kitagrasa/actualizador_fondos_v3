@@ -111,7 +111,7 @@ class FTScraper:
                 except (ValueError, IndexError):
                     continue
             
-            logger.info(f"FT: {len(prices)} precios obtenidos (últimas 3 semanas)")
+            logger.info(f"FT: {len(prices)} precios obtenidos")
             
             return {"name": fund_name, "currency": "EUR", "prices": prices}
         
