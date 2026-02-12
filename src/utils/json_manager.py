@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
-# Añadir directorio raíz al path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from utils.logger import setup_logger
@@ -19,11 +18,9 @@ class JSONManager:
         self.base_path.mkdir(parents=True, exist_ok=True)
     
     def get_json_path(self, isin):
-        """Ruta del archivo JSON para un ISIN"""
         return self.base_path / f"{isin}.json"
     
     def load_data(self, isin):
-        """Carga datos existentes o crea estructura nueva"""
         json_path = self.get_json_path(isin)
         
         if json_path.exists():
@@ -42,15 +39,6 @@ class JSONManager:
         }
     
     def upsert_price(self, data, new_price):
-        """
-        Inserta o actualiza precio aplicando prioridad de fuente
-        new_price = {
-            "date": "2026-02-10",
-            "price": 32.828,
-            "source": "ft",
-            "priority": 20
-        }
-        """
         date_str = new_price["date"]
         existing_idx = None
         
@@ -63,18 +51,17 @@ class JSONManager:
             existing_priority = data["prices"][existing_idx].get("priority", 0)
             if new_price["priority"] > existing_priority:
                 data["prices"][existing_idx] = new_price
-                logger.info(f"✓ Actualizado {date_str}: {new_price['price']} ({new_price['source']} sobrescribe)")
+                logger.info(f"Actualizado {date_str}: {new_price['price']} ({new_price['source']} sobrescribe)")
                 return True
             else:
                 logger.debug(f"Mantenido {date_str} con fuente prioritaria existente")
                 return False
         else:
             data["prices"].append(new_price)
-            logger.info(f"✓ Añadido {date_str}: {new_price['price']} ({new_price['source']})")
+            logger.info(f"Añadido {date_str}: {new_price['price']} ({new_price['source']})")
             return True
     
     def rotate_old_data(self, data, years=8):
-        """Mantiene solo últimos 8 años de datos"""
         cutoff_date = (datetime.now() - timedelta(days=years*365.25)).strftime("%Y-%m-%d")
         original_count = len(data["prices"])
         
@@ -86,20 +73,18 @@ class JSONManager:
             logger.info(f"Rotados {removed} precios anteriores a {cutoff_date}")
     
     def save_data(self, isin, data):
-        """Guarda datos en JSON"""
         data["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         json_path = self.get_json_path(isin)
         
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"💾 Guardado {json_path.name} ({len(data['prices'])} precios)")
+        logger.info(f"Guardado {json_path.name} ({len(data['prices'])} precios)")
     
     def delete_fund_data(self, isin):
-        """Elimina archivo JSON de un fondo"""
         json_path = self.get_json_path(isin)
         if json_path.exists():
             json_path.unlink()
-            logger.info(f"🗑️  Eliminado histórico de {isin}")
+            logger.info(f"Eliminado histórico de {isin}")
             return True
         return False
