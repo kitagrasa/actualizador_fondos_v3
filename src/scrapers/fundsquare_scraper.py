@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import sys
 from pathlib import Path
+import re
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -27,9 +29,8 @@ class FundsquareScraper:
         except:
             return None
     
-    def scrape(self, id_instr):
-        url = f"{self.BASE_URL}?idInstr={id_instr}"
-        logger.info(f"Fundsquare: {url}")
+    def scrape_page(self, id_instr, page=1):
+        url = f"{self.BASE_URL}?idInstr={id_instr}&page={page}"
         
         try:
             response = self.session.get(url, timeout=self.timeout)
@@ -39,8 +40,15 @@ class FundsquareScraper:
             
             table = soup.find('table', class_='tabHorizontal')
             if not table:
-                logger.warning(f"Fundsquare: Tabla no encontrada para {id_instr}")
-                return {"prices": []}
+                return [], 0
+            
+            # Detectar número total de páginas
+            total_pages = 1
+            pagination_text = soup.find('p', string=lambda x: x and 'Number of pages' in x)
+            if pagination_text:
+                match = re.search(r'Number of pages[:\s]+(\d+)', pagination_text.get_text())
+                if match:
+                    total_pages = int(match.group(1))
             
             prices = []
             rows = table.find_all('tr')[2:]
@@ -71,9 +79,32 @@ class FundsquareScraper:
                 except (ValueError, IndexError):
                     continue
             
-            logger.info(f"Fundsquare: {len(prices)} precios obtenidos")
-            return {"prices": prices}
+            return prices, total_pages
         
         except Exception as e:
-            logger.error(f"Fundsquare Error para {id_instr}: {str(e)}")
-            return {"prices": []}
+            logger.error(f"Fundsquare: Error en página {page}: {str(e)}")
+            return [], 0
+    
+    def scrape(self, id_instr, max_pages=50):
+        logger.info(f"Fundsquare: https://www.fundsquare.net/security/histo-prices?idInstr={id_instr}")
+        
+        all_prices = []
+        
+        # Primera página para detectar total
+        prices, total_pages = self.scrape_page(id_instr, page=1)
+        all_prices.extend(prices)
+        
+        logger.info(f"Fundsquare: {len(prices)} precios en página 1 de {total_pages}")
+        
+        # Limitar a max_pages para evitar timeouts
+        pages_to_fetch = min(total_pages, max_pages)
+        
+        # Resto de páginas
+        for page in range(2, pages_to_fetch + 1):
+            time.sleep(0.5)  # Delay para evitar bloqueos
+            prices, _ = self.scrape_page(id_instr, page=page)
+            all_prices.extend(prices)
+            logger.info(f"Fundsquare: {len(prices)} precios en página {page}")
+        
+        logger.info(f"Fundsquare: {len(all_prices)} precios totales obtenidos")
+        return {"prices": all_prices}
