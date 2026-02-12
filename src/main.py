@@ -72,13 +72,14 @@ def main():
         
         data = json_manager.load_data(isin)
         
-        # Fundsquare primero (histórico completo, prioridad baja)
+        # 1. Fundsquare primero (últimos días, prioridad baja)
         fs_result = fs_scraper.scrape(id_instr)
         for price in fs_result["prices"]:
             json_manager.upsert_price(data, price)
         
-        # FT después (últimos datos, prioridad alta - sobrescribe)
-        ft_result = ft_scraper.scrape(isin)
+        # 2. FT después (histórico completo, prioridad alta - sobrescribe)
+        ft_result = ft_scraper.scrape(isin, years_back=20)
+        
         if ft_result["name"] and not data["name"]:
             data["name"] = ft_result["name"]
         if ft_result["currency"]:
@@ -87,7 +88,6 @@ def main():
         for price in ft_result["prices"]:
             json_manager.upsert_price(data, price)
         
-        # Guardar (ya no hay rotación)
         json_manager.save_data(isin, data)
     
     logger.info(f"\nProceso completado correctamente")
