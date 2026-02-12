@@ -1,6 +1,5 @@
 import json
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 import sys
 
@@ -51,20 +50,18 @@ class JSONManager:
             existing_priority = data["prices"][existing_idx].get("priority", 0)
             if new_price["priority"] > existing_priority:
                 data["prices"][existing_idx] = new_price
-                logger.info(f"Actualizado {date_str}: {new_price['price']} ({new_price['source']} sobrescribe)")
+                logger.debug(f"Actualizado {date_str}: {new_price['price']} ({new_price['source']} sobrescribe)")
                 return True
             else:
                 logger.debug(f"Mantenido {date_str} con fuente prioritaria existente")
                 return False
         else:
             data["prices"].append(new_price)
-            logger.info(f"Añadido {date_str}: {new_price['price']} ({new_price['source']})")
+            logger.debug(f"Añadido {date_str}: {new_price['price']} ({new_price['source']})")
             return True
     
     def save_data(self, isin, data):
         data["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Ordenar precios por fecha
         data["prices"].sort(key=lambda x: x["date"])
         
         json_path = self.get_json_path(isin)
