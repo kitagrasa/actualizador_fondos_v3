@@ -26,13 +26,13 @@ def load_funds_config(config_path="data/funds_config.txt"):
             
             parts = line.split('|')
             if len(parts) != 2:
-                logger.warning(f"Línea {line_num} inválida: {line}")
+                logger.warning(f"Linea {line_num} invalida: {line}")
                 continue
             
             isin, id_instr = parts[0].strip(), parts[1].strip()
             funds.append({"isin": isin, "id_instr": id_instr})
     
-    logger.info(f"Cargados {len(funds)} fondos desde configuración")
+    logger.info(f"Cargados {len(funds)} fondos desde configuracion")
     return funds
 
 def cleanup_deleted_funds(current_isins, json_manager):
@@ -48,7 +48,7 @@ def cleanup_deleted_funds(current_isins, json_manager):
             json_manager.delete_fund_data(isin)
 
 def main():
-    logger.info("Iniciando actualización de precios...")
+    logger.info("Iniciando actualizacion de precios...")
     
     funds = load_funds_config()
     if not funds:
@@ -72,13 +72,13 @@ def main():
         
         data = json_manager.load_data(isin)
         
-        # 1. Fundsquare primero (últimos días, prioridad baja)
+        # Fundsquare primero (prioridad baja)
         fs_result = fs_scraper.scrape(id_instr)
         for price in fs_result["prices"]:
             json_manager.upsert_price(data, price)
         
-        # 2. FT después (histórico completo, prioridad alta - sobrescribe)
-        ft_result = ft_scraper.scrape(isin, years_back=20)
+        # FT despues (prioridad alta - sobrescribe)
+        ft_result = ft_scraper.scrape(isin)
         
         if ft_result["name"] and not data["name"]:
             data["name"] = ft_result["name"]
