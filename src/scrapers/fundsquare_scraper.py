@@ -1,7 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from ..utils.logger import setup_logger
+import sys
+from pathlib import Path
+
+# Añadir directorio raíz al path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
