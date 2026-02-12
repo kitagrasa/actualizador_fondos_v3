@@ -1,5 +1,9 @@
 import sys
 from pathlib import Path
+
+# Añadir directorio src al path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from scrapers.ft_scraper import FTScraper
 from scrapers.fundsquare_scraper import FundsquareScraper
 from utils.json_manager import JSONManager
@@ -38,7 +42,11 @@ def load_funds_config(config_path="data/funds_config.txt"):
 
 def cleanup_deleted_funds(current_isins, json_manager):
     """Elimina JSONs de fondos ya no presentes en la configuración"""
-    existing_files = list(Path("data/historical").glob("*.json"))
+    historical_path = Path("data/historical")
+    if not historical_path.exists():
+        return
+    
+    existing_files = list(historical_path.glob("*.json"))
     
     for json_file in existing_files:
         isin = json_file.stem
