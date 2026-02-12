@@ -17,20 +17,22 @@ class FTScraper:
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         })
     
     def parse_date_ft(self, date_str):
         date_clean = date_str.strip()
         
-        for prefix in ['Mon, ', 'Tue, ', 'Wed, ', 'Thu, ', 'Fri, ', 'Sat, ', 'Sun, ']:
+        for prefix in ['Monday, ', 'Tuesday, ', 'Wednesday, ', 'Thursday, ', 'Friday, ', 'Saturday, ', 'Sunday, ',
+                       'Mon, ', 'Tue, ', 'Wed, ', 'Thu, ', 'Fri, ', 'Sat, ', 'Sun, ']:
             date_clean = date_clean.replace(prefix, '')
         
-        formats = [
-            "%A, %B %d, %Y",
-            "%b %d, %Y",
-            "%B %d, %Y"
-        ]
+        formats = ["%B %d, %Y", "%b %d, %Y"]
         
         for fmt in formats:
             try:
@@ -42,11 +44,13 @@ class FTScraper:
     
     def scrape(self, isin):
         url = self.BASE_URL.format(isin=isin)
-        logger.info(f"FT: {url}")
+        logger.info(f"FT: Scrapeando {url}")
         
         try:
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
+            
+            logger.info(f"FT: Status code {response.status_code}")
             
             soup = BeautifulSoup(response.text, 'lxml')
             
@@ -55,31 +59,53 @@ class FTScraper:
                 name_elem = soup.find('h1')
             fund_name = name_elem.get_text(strip=True) if name_elem else ""
             
+            logger.info(f"FT: Nombre del fondo: '{fund_name}'")
+            
             table = soup.find('table', class_='mod-tearsheet-historical-prices__results')
             
             if not table:
-                logger.warning(f"FT: Tabla no encontrada para {isin}")
-                return {"name": fund_name, "currency": "EUR", "prices": []}
+                logger.warning(f"FT: No se encontró tabla con clase 'mod-tearsheet-historical-prices__results'")
+                all_tables = soup.find_all('table')
+                logger.info(f"FT: Se encontraron {len(all_tables)} tablas en total")
+                
+                if all_tables:
+                    logger.info(f"FT: Intentando usar la primera tabla disponible")
+                    table = all_tables[0]
+                else:
+                    return {"name": fund_name, "currency": "EUR", "prices": []}
+            
+            tbody = table.find('tbody')
+            if not tbody:
+                logger.warning(f"FT: No se encontró tbody, usando tr directamente")
+                rows = table.find_all('tr')[1:]
+            else:
+                rows = tbody.find_all('tr')
+            
+            logger.info(f"FT: Filas encontradas: {len(rows)}")
             
             prices = []
-            rows = table.find('tbody').find_all('tr') if table.find('tbody') else []
-            
-            for row in rows:
+            for idx, row in enumerate(rows):
                 cols = row.find_all('td')
+                
                 if len(cols) < 5:
+                    logger.debug(f"FT: Fila {idx} tiene solo {len(cols)} columnas, saltando")
                     continue
                 
                 date_raw = cols[0].get_text(strip=True)
                 close_price_raw = cols[4].get_text(strip=True)
                 
+                logger.debug(f"FT: Fila {idx} - Fecha raw: '{date_raw}', Close raw: '{close_price_raw}'")
+                
                 date_parsed = self.parse_date_ft(date_raw)
                 if not date_parsed:
+                    logger.debug(f"FT: No se pudo parsear fecha '{date_raw}'")
                     continue
                 
                 try:
                     price_clean = close_price_raw.replace(',', '').strip()
                     
-                    if not price_clean or price_clean in ['0', '0.00', '0.0']:
+                    if not price_clean or price_clean in ['0', '0.00', '0.0', '00.00']:
+                        logger.debug(f"FT: Precio inválido '{price_clean}', saltando")
                         continue
                     
                     price_value = float(price_clean)
@@ -90,12 +116,25 @@ class FTScraper:
                         "source": "ft",
                         "priority": 20
                     })
-                except (ValueError, IndexError):
+                    
+                    logger.debug(f"FT: Precio añadido: {date_parsed} = {price_value}")
+                    
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"FT: Error parseando precio '{close_price_raw}': {e}")
                     continue
             
             logger.info(f"FT: {len(prices)} precios obtenidos para {isin}")
+            
+            if len(prices) == 0:
+                logger.warning(f"FT: ADVERTENCIA - No se obtuvieron precios. Revisa logs de debug.")
+            
             return {"name": fund_name, "currency": "EUR", "prices": prices}
         
+        except requests.exceptions.RequestException as e:
+            logger.error(f"FT: Error de conexión para {isin}: {str(e)}")
+            return {"name": "", "currency": "EUR", "prices": []}
         except Exception as e:
-            logger.error(f"FT Error para {isin}: {str(e)}")
+            logger.error(f"FT: Error inesperado para {isin}: {str(e)}")
+            import traceback
+            logger.error(f"FT: Traceback: {traceback.format_exc()}")
             return {"name": "", "currency": "EUR", "prices": []}
