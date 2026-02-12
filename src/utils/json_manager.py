@@ -61,19 +61,12 @@ class JSONManager:
             logger.info(f"Añadido {date_str}: {new_price['price']} ({new_price['source']})")
             return True
     
-    def rotate_old_data(self, data, years=8):
-        cutoff_date = (datetime.now() - timedelta(days=years*365.25)).strftime("%Y-%m-%d")
-        original_count = len(data["prices"])
-        
-        data["prices"] = [p for p in data["prices"] if p["date"] >= cutoff_date]
-        data["prices"].sort(key=lambda x: x["date"])
-        
-        removed = original_count - len(data["prices"])
-        if removed > 0:
-            logger.info(f"Rotados {removed} precios anteriores a {cutoff_date}")
-    
     def save_data(self, isin, data):
         data["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Ordenar precios por fecha
+        data["prices"].sort(key=lambda x: x["date"])
+        
         json_path = self.get_json_path(isin)
         
         with open(json_path, 'w', encoding='utf-8') as f:
