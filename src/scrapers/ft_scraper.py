@@ -27,15 +27,13 @@ class FTScraper:
         'Wednesday, September 24, 2025' -> '2025-09-24'
         'Wed, Sep 24, 2025' -> '2025-09-24'
         """
-        # Limpiar sufijos de día
-        date_clean = date_str.split('Wed, ')[-1].split('Thu, ')[-1].split('Fri, ')[-1]
-        date_clean = date_clean.split('Mon, ')[-1].split('Tue, ')[-1].split('Sat, ')[-1].split('Sun, ')[-1]
+        date_clean = date_str.replace('Wed, ', '').replace('Thu, ', '').replace('Fri, ', '')
+        date_clean = date_clean.replace('Mon, ', '').replace('Tue, ', '').replace('Sat, ', '').replace('Sun, ', '')
         
-        # Probar formatos
         formats = [
-            "%A, %B %d, %Y",      # Wednesday, September 24, 2025
-            "%b %d, %Y",          # Sep 24, 2025
-            "%B %d, %Y"           # September 24, 2025
+            "%A, %B %d, %Y",
+            "%b %d, %Y",
+            "%B %d, %Y"
         ]
         
         for fmt in formats:
@@ -67,14 +65,11 @@ class FTScraper:
             
             soup = BeautifulSoup(response.text, 'lxml')
             
-            # Extraer nombre del fondo
             name_elem = soup.find('h1', class_='mod-tearsheet-overview__header__name')
             if not name_elem:
-                # Intentar alternativa
                 name_elem = soup.find('h1')
             fund_name = name_elem.get_text(strip=True) if name_elem else ""
             
-            # Buscar tabla de precios históricos (múltiples intentos)
             table = (
                 soup.find('table', class_='mod-tearsheet-historical-prices__results') or
                 soup.find('table', class_='mod-ui-table') or
@@ -86,27 +81,42 @@ class FTScraper:
                 return {"name": fund_name, "currency": "EUR", "prices": []}
             
             prices = []
-            rows = table.find_all('tr')[1:]  # Saltar header
+            rows = table.find_all('tr')[1:]
             
             for row in rows:
                 cols = row.find_all('td')
                 if len(cols) < 2:
                     continue
                 
-                # Columna fecha (primera)
                 date_raw = cols[0].get_text(strip=True)
                 date_parsed = self.parse_date_ft(date_raw)
                 
                 if not date_parsed:
                     continue
                 
-                # Buscar precio en columna "Close" (típicamente columna 4, índice 3)
-                # Pero si no hay 5 columnas, usar la segunda
                 price_col_idx = 3 if len(cols) >= 5 else 1
                 price_raw = cols[price_col_idx].get_text(strip=True)
                 
                 try:
-                    # Limpiar precio: "27.32" o "1,234.56"
                     price_clean = price_raw.replace(',', '').replace('€', '').replace('EUR', '').strip()
                     
-                    # Ignor
+                    if not price_clean or price_clean == '0.00' or price_clean == '00.00':
+                        continue
+                    
+                    price_value = float(price_clean)
+                    
+                    prices.append({
+                        "date": date_parsed,
+                        "price": price_value,
+                        "source": "ft",
+                        "priority": 20
+                    })
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"No se pudo parsear precio '{price_raw}': {e}")
+                    continue
+            
+            logger.info(f"✓ FT: {len(prices)} precios obtenidos para {isin}")
+            return {"name": fund_name, "currency": "EUR", "prices": prices}
+        
+        except Exception as e:
+            logger.error(f"❌ FT Error para {
