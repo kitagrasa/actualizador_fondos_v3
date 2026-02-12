@@ -4,10 +4,10 @@ from datetime import datetime
 
 def setup_logger(name):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # ⭐ CAMBIAR A DEBUG
+    logger.setLevel(logging.INFO)  # Cambiar a INFO para logs limpios
     
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)  # ⭐ CAMBIAR A DEBUG
+    handler.setLevel(logging.INFO)
     
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
